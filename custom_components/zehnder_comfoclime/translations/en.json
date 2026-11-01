@@ -1,0 +1,86 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Zehnder ComfoClime",
+        "description": "Enter the IP address or hostname of your Zehnder ComfoClime gateway.",
+        "data": {
+          "host": "IP Address / Hostname"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the Zehnder gateway. Please verify the IP address and network connection.",
+      "api_error": "The Zehnder gateway responded with an error.",
+      "unknown": "An unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This Zehnder ComfoClime is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Zehnder ComfoClime Options",
+        "description": "Configure polling interval for live sensor readings.",
+        "data": {
+          "scan_interval": "Update Interval (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "fan": {
+      "ventilation": {
+        "name": "Ventilation"
+      }
+    },
+    "sensor": {
+      "outdoor_temp": { "name": "Outdoor Temperature" },
+      "supply_temp_wrg": { "name": "Supply Temperature (Heat Exchanger)" },
+      "supply_airflow": { "name": "Supply Air Flow" },
+      "exhaust_airflow": { "name": "Exhaust Air Flow" },
+      "rmot_temp": { "name": "RMOT Outdoor Temperature" },
+      "target_comfort_temp": { "name": "Target Comfort Temperature" },
+      "bypass_state_pct": { "name": "Bypass Position" },
+      "indoor_temp": { "name": "Indoor Temperature" },
+      "supply_temp_after_hp": { "name": "Supply Temperature (after Heat Pump)" },
+      "exhaust_temp_after_hp": { "name": "Exhaust Temperature (after Heat Pump)" },
+      "supply_coil_temp": { "name": "Supply Coil Temperature" },
+      "exhaust_coil_temp": { "name": "Exhaust Coil Temperature" },
+      "compressor_temp": { "name": "Compressor Temperature" },
+      "power_watts": { "name": "Heat Pump Power" },
+      "heatpump_modulation_pct": { "name": "Heat Pump Modulation" },
+      "tpma_temp": { "name": "TPMA Reference Temperature" },
+      "setpoint_temp": { "name": "Setpoint Temperature" }
+    },
+    "binary_sensor": {
+      "hp_active": { "name": "Heat Pump Active" },
+      "free_cooling_available": { "name": "Free Cooling Available" },
+      "free_cooling_active": { "name": "Free Cooling Active" },
+      "bypass_active": { "name": "Bypass Open" }
+    },
+    "switch": {
+      "heatpump_power": { "name": "Heat Pump Power" },
+      "auto_mode": { "name": "Automatic Profile Mode" }
+    },
+    "select": {
+      "temperature_profile": {
+        "name": "Temperature Profile",
+        "state": {
+          "comfort": "Comfort",
+          "power": "Power / Boost",
+          "eco": "Eco"
+        }
+      },
+      "season_mode": {
+        "name": "Season Mode",
+        "state": {
+          "transition": "Transition (Ventilation Only)",
+          "heating": "Heating",
+          "cooling": "Cooling"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "domain": "zehnder_comfoclime",
+  "name": "Zehnder ComfoClime",
+  "codeowners": ["@florianwolf100-ux"],
+  "config_flow": true,
+  "documentation": "https://github.com/florianwolf100-ux/ha-zehnder-comfoclime",
+  "issue_tracker": "https://github.com/florianwolf100-ux/ha-zehnder-comfoclime/issues",
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "requirements": [],
+  "version": "1.0.0"
+}

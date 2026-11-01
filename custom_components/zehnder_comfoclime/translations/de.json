@@ -1,0 +1,86 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mit Zehnder ComfoClime verbinden",
+        "description": "Gib die IP-Adresse oder den Hostnamen deines Zehnder ComfoClime Gateways ein.",
+        "data": {
+          "host": "IP-Adresse / Hostname"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zum Zehnder Gateway fehlgeschlagen. Bitte prüfe IP-Adresse und Netzwerk.",
+      "api_error": "Das Zehnder Gateway hat einen Fehler gemeldet.",
+      "unknown": "Ein unerwarteter Fehler ist aufgetreten."
+    },
+    "abort": {
+      "already_configured": "Diese Zehnder ComfoClime ist bereits konfiguriert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Zehnder ComfoClime Optionen",
+        "description": "Abfrageintervall für Live-Sensordaten anpassen.",
+        "data": {
+          "scan_interval": "Aktualisierungsintervall (Sekunden)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "fan": {
+      "ventilation": {
+        "name": "Lüftung"
+      }
+    },
+    "sensor": {
+      "outdoor_temp": { "name": "Außentemperatur vor WRG" },
+      "supply_temp_wrg": { "name": "Zulufttemperatur nach WRG" },
+      "supply_airflow": { "name": "Zuluft-Volumenstrom" },
+      "exhaust_airflow": { "name": "Abluft-Volumenstrom" },
+      "rmot_temp": { "name": "Gleitende mittlere Außentemperatur (RMOT)" },
+      "target_comfort_temp": { "name": "Ziel-Komforttemperatur" },
+      "bypass_state_pct": { "name": "Bypass-Klappe" },
+      "indoor_temp": { "name": "Raumtemperatur" },
+      "supply_temp_after_hp": { "name": "Zulufttemperatur nach Wärmepumpe" },
+      "exhaust_temp_after_hp": { "name": "Fortlufttemperatur nach Wärmepumpe" },
+      "supply_coil_temp": { "name": "Registertemperatur Zuluft" },
+      "exhaust_coil_temp": { "name": "Registertemperatur Abluft" },
+      "compressor_temp": { "name": "Kompressortemperatur" },
+      "power_watts": { "name": "Elektrische Leistung Wärmepumpe" },
+      "heatpump_modulation_pct": { "name": "Wärmepumpen-Modulation" },
+      "tpma_temp": { "name": "Referenztemperatur Mischluft (TPMA)" },
+      "setpoint_temp": { "name": "Aktuelle Solltemperatur" }
+    },
+    "binary_sensor": {
+      "hp_active": { "name": "Wärmepumpe Aktiv" },
+      "free_cooling_available": { "name": "Freie Kühlung Verfügbar" },
+      "free_cooling_active": { "name": "Freie Kühlung Aktiv" },
+      "bypass_active": { "name": "Bypass Geöffnet" }
+    },
+    "switch": {
+      "heatpump_power": { "name": "Wärmepumpe Betrieb" },
+      "auto_mode": { "name": "Automatikmodus (Profil)" }
+    },
+    "select": {
+      "temperature_profile": {
+        "name": "Temperaturprofil",
+        "state": {
+          "comfort": "Comfort",
+          "power": "Power / Boost",
+          "eco": "Eco"
+        }
+      },
+      "season_mode": {
+        "name": "Betriebsmodus Saison",
+        "state": {
+          "transition": "Übergangszeit (Nur Lüften)",
+          "heating": "Heizen",
+          "cooling": "Kühlen"
+        }
+      }
+    }
+  }
+}

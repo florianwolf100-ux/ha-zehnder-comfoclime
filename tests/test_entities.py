@@ -20,6 +20,7 @@ from custom_components.zehnder_comfoclime.binary_sensor import (
 )
 from custom_components.zehnder_comfoclime.switch import (
     ZehnderAutoModeSwitch,
+    ZehnderAutoSeasonSwitch,
     ZehnderHeatPumpSwitch,
 )
 from custom_components.zehnder_comfoclime.select import (
@@ -74,6 +75,19 @@ def mock_coordinator():
             "rmot_temp": 8.1,
             "target_comfort_temp": 23.9,
             "bypass_state_pct": 0.0,
+            "exhaust_humidity": 55.0,
+            "outdoor_humidity": 70.0,
+            "supply_humidity": 50.0,
+            "fortluft_humidity": 72.0,
+            "power_watts": 30.0,
+            "exhaust_fan_rpm": 1600.0,
+            "supply_fan_rpm": 1600.0,
+            "fortluft_temp": 11.5,
+        },
+        "thermal_profile": {
+            "season": {"status": 1, "season": 0},
+            "temperature": {"status": 0, "manualTemperature": 22.5},
+            "temperatureProfile": 1,
         },
         "clime": {
             "indoor_temp": 22.8,
@@ -243,22 +257,31 @@ def test_binary_sensor_entities(mock_coordinator, mock_entry):
 
 @pytest.mark.asyncio
 async def test_switches(mock_coordinator, mock_entry):
-    """Test switches for heat pump power and auto mode."""
+    """Test switches for heat pump power, auto mode, and auto season."""
     hp_switch = ZehnderHeatPumpSwitch(mock_coordinator, mock_entry)
     auto_switch = ZehnderAutoModeSwitch(mock_coordinator, mock_entry)
+    auto_season_switch = ZehnderAutoSeasonSwitch(mock_coordinator, mock_entry)
 
     mock_coordinator.api.set_hp_standby = AsyncMock()
     mock_coordinator.api.set_status = AsyncMock()
+    mock_coordinator.api.set_auto_season = AsyncMock()
 
     # Initial state
     assert hp_switch.is_on is True  # hpStandby is False
     assert auto_switch.is_on is True  # status is STATUS_AUTO
+    assert auto_season_switch.is_on is True  # season.status is 1
 
     await hp_switch.async_turn_off()
     mock_coordinator.api.set_hp_standby.assert_called_with(True)
 
     await auto_switch.async_turn_off()
     mock_coordinator.api.set_status.assert_called_with(STATUS_MANUAL)
+
+    await auto_season_switch.async_turn_off()
+    mock_coordinator.api.set_auto_season.assert_called_with(False)
+
+    await auto_season_switch.async_turn_on()
+    mock_coordinator.api.set_auto_season.assert_called_with(True)
 
 
 @pytest.mark.asyncio

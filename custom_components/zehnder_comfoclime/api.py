@@ -25,7 +25,15 @@ from .const import (
     TEL_CLIME_SUPPLY_TEMP_HP,
     TEL_CLIME_TPMA_TEMP,
     TEL_Q350_BYPASS_STATE,
+    TEL_Q350_EXHAUST_FAN_RPM,
+    TEL_Q350_EXHAUST_HUMIDITY,
+    TEL_Q350_FORTLUFT_HUMIDITY,
+    TEL_Q350_FORTLUFT_TEMP,
+    TEL_Q350_OUTDOOR_HUMIDITY,
+    TEL_Q350_POWER_WATTS,
     TEL_Q350_RMOT_TEMP,
+    TEL_Q350_SUPPLY_FAN_RPM,
+    TEL_Q350_SUPPLY_HUMIDITY,
     TEL_Q350_SUPPLY_TEMP_WRG,
     TEL_Q350_TARGET_COMFORT_TEMP,
 )
@@ -266,6 +274,30 @@ class ZehnderApiClient:
                 "bypass_state_pct": await self.read_telemetry(
                     self.q350_uuid, TEL_Q350_BYPASS_STATE, factor=1.0, signed=False
                 ),
+                "exhaust_humidity": await self.read_telemetry(
+                    self.q350_uuid, TEL_Q350_EXHAUST_HUMIDITY, factor=1.0, signed=False
+                ),
+                "outdoor_humidity": await self.read_telemetry(
+                    self.q350_uuid, TEL_Q350_OUTDOOR_HUMIDITY, factor=1.0, signed=False
+                ),
+                "supply_humidity": await self.read_telemetry(
+                    self.q350_uuid, TEL_Q350_SUPPLY_HUMIDITY, factor=1.0, signed=False
+                ),
+                "fortluft_humidity": await self.read_telemetry(
+                    self.q350_uuid, TEL_Q350_FORTLUFT_HUMIDITY, factor=1.0, signed=False
+                ),
+                "power_watts": await self.read_telemetry(
+                    self.q350_uuid, TEL_Q350_POWER_WATTS, factor=1.0, signed=False
+                ),
+                "exhaust_fan_rpm": await self.read_telemetry(
+                    self.q350_uuid, TEL_Q350_EXHAUST_FAN_RPM, factor=1.0, signed=False
+                ),
+                "supply_fan_rpm": await self.read_telemetry(
+                    self.q350_uuid, TEL_Q350_SUPPLY_FAN_RPM, factor=1.0, signed=False
+                ),
+                "fortluft_temp": await self.read_telemetry(
+                    self.q350_uuid, TEL_Q350_FORTLUFT_TEMP, factor=0.1
+                ),
             }
 
         clime_telemetry: dict[str, Any] = {}
@@ -425,5 +457,17 @@ class ZehnderApiClient:
         }
         await self._request(
             f"/system/{uuid}/dashboard", method="PUT", data=payload
+        )
+        return True
+
+    async def set_auto_season(self, enabled: bool) -> bool:
+        """Enable or disable automatic season recognition."""
+        uuid = await self._ensure_clime_uuid()
+        payload = {
+            "season": {"status": 1 if enabled else 0},
+            "timestamp": datetime.now().isoformat(),
+        }
+        await self._request(
+            f"/system/{uuid}/thermalprofile", method="PUT", data=payload
         )
         return True

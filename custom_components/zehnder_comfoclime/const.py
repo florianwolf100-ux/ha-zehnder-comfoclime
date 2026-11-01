@@ -62,12 +62,22 @@ PROFILE_ID_TO_PRESET: Final = {
 # Telemetry IDs
 # ComfoAir Q350
 TEL_Q350_OUTDOOR_TEMP: Final = 117          # Außenluft vor WRG (°C)
-TEL_Q350_SUPPLY_TEMP_WRG: Final = 118       # Zuluft nach WRG Wärmetauscher (°C)
+TEL_Q350_SUPPLY_TEMP_WRG: Final = 278       # Zuluft nach WRG Wärmetauscher (°C)
 TEL_Q350_EXHAUST_AIRFLOW: Final = 119       # Abluft-Volumenstrom (m³/h)
 TEL_Q350_SUPPLY_AIRFLOW: Final = 120        # Zuluft-Volumenstrom (m³/h)
+TEL_Q350_EXHAUST_FAN_RPM: Final = 121       # Abluft Lüfter Drehzahl (rpm)
+TEL_Q350_SUPPLY_FAN_RPM: Final = 122        # Zuluft Lüfter Drehzahl (rpm)
+TEL_Q350_POWER_WATTS: Final = 128           # Lüftung Leistungsaufnahme (W)
+TEL_Q350_ENERGY_YEAR: Final = 129           # Lüftung Energie Jahr (kWh)
+TEL_Q350_ENERGY_TOTAL: Final = 130          # Lüftung Energie Gesamt (kWh)
 TEL_Q350_RMOT_TEMP: Final = 209             # Gleitende mittlere Außentemp (°C)
 TEL_Q350_TARGET_COMFORT_TEMP: Final = 212   # Ziel-Komforttemperatur (°C)
 TEL_Q350_BYPASS_STATE: Final = 227          # Bypass-Klappe (%)
+TEL_Q350_FORTLUFT_TEMP: Final = 275         # Fortluft Temperatur (°C)
+TEL_Q350_EXHAUST_HUMIDITY: Final = 290      # Abluft Feuchtigkeit (%)
+TEL_Q350_FORTLUFT_HUMIDITY: Final = 291     # Fortluft Feuchtigkeit (%)
+TEL_Q350_OUTDOOR_HUMIDITY: Final = 292      # Außenluft Feuchtigkeit (%)
+TEL_Q350_SUPPLY_HUMIDITY: Final = 294       # Zuluft Feuchtigkeit (%)
 
 # ComfoClime 24
 TEL_CLIME_TPMA_TEMP: Final = 4145           # TPMA Mischluft (°C)

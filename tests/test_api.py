@@ -149,6 +149,16 @@ async def test_write_operations():
     assert call_args["data"]["season"] == 2
     assert call_args["data"]["hpStandby"] is False
 
+    # Auto season
+    await client.set_auto_season(True)
+    call_args = client._request.call_args[1]
+    assert call_args["data"]["season"]["status"] == 1
+    assert call_args["method"] == "PUT"
+
+    await client.set_auto_season(False)
+    call_args = client._request.call_args[1]
+    assert call_args["data"]["season"]["status"] == 0
+
 
 @pytest.mark.asyncio
 async def test_telemetry_cache_fallback():

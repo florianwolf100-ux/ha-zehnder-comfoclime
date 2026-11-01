@@ -48,6 +48,14 @@
       "rmot_temp": { "name": "RMOT Outdoor Temperature" },
       "target_comfort_temp": { "name": "Target Comfort Temperature" },
       "bypass_state_pct": { "name": "Bypass Position" },
+      "exhaust_humidity": { "name": "Exhaust Humidity" },
+      "outdoor_humidity": { "name": "Outdoor Humidity" },
+      "supply_humidity": { "name": "Supply Humidity" },
+      "fortluft_humidity": { "name": "Exhaust Air Humidity" },
+      "ventilation_power_watts": { "name": "Ventilation Power" },
+      "exhaust_fan_rpm": { "name": "Exhaust Fan Speed" },
+      "supply_fan_rpm": { "name": "Supply Fan Speed" },
+      "fortluft_temp": { "name": "Exhaust Air Temperature" },
       "indoor_temp": { "name": "Indoor Temperature" },
       "supply_temp_after_hp": { "name": "Supply Temperature (after Heat Pump)" },
       "exhaust_temp_after_hp": { "name": "Exhaust Temperature (after Heat Pump)" },
@@ -68,7 +76,8 @@
     },
     "switch": {
       "heatpump_power": { "name": "Heat Pump Power" },
-      "auto_mode": { "name": "Automatic Profile Mode" }
+      "auto_mode": { "name": "Automatic Profile Mode" },
+      "auto_season": { "name": "Automatic Season Recognition" }
     },
     "select": {
       "temperature_profile": {

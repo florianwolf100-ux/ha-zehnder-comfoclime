@@ -48,6 +48,14 @@
       "rmot_temp": { "name": "Gleitende mittlere Außentemperatur (RMOT)" },
       "target_comfort_temp": { "name": "Ziel-Komforttemperatur" },
       "bypass_state_pct": { "name": "Bypass-Klappe" },
+      "exhaust_humidity": { "name": "Abluft Feuchtigkeit" },
+      "outdoor_humidity": { "name": "Außenluft Feuchtigkeit" },
+      "supply_humidity": { "name": "Zuluft Feuchtigkeit" },
+      "fortluft_humidity": { "name": "Fortluft Feuchtigkeit" },
+      "ventilation_power_watts": { "name": "Lüftung Leistungsaufnahme" },
+      "exhaust_fan_rpm": { "name": "Abluft Lüfter Drehzahl" },
+      "supply_fan_rpm": { "name": "Zuluft Lüfter Drehzahl" },
+      "fortluft_temp": { "name": "Fortluft Temperatur" },
       "indoor_temp": { "name": "Raumtemperatur" },
       "supply_temp_after_hp": { "name": "Zulufttemperatur nach Wärmepumpe" },
       "exhaust_temp_after_hp": { "name": "Fortlufttemperatur nach Wärmepumpe" },
@@ -68,7 +76,8 @@
     },
     "switch": {
       "heatpump_power": { "name": "Wärmepumpe Betrieb" },
-      "auto_mode": { "name": "Automatikmodus (Profil)" }
+      "auto_mode": { "name": "Automatikmodus (Profil)" },
+      "auto_season": { "name": "Automatische Jahreszeiterkennung" }
     },
     "select": {
       "temperature_profile": {

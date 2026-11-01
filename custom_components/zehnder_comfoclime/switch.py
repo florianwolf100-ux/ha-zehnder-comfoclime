@@ -31,6 +31,7 @@ async def async_setup_entry(
     entities: list[SwitchEntity] = [
         ZehnderHeatPumpSwitch(coordinator, entry),
         ZehnderAutoModeSwitch(coordinator, entry),
+        ZehnderAutoSeasonSwitch(coordinator, entry),
     ]
     async_add_entities(entities)
 
@@ -128,4 +129,52 @@ class ZehnderAutoModeSwitch(
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Switch to manual mode."""
         await self.coordinator.api.set_status(STATUS_MANUAL)
+        await self.coordinator.async_request_refresh()
+
+
+class ZehnderAutoSeasonSwitch(
+    CoordinatorEntity[ZehnderDataUpdateCoordinator], SwitchEntity
+):
+    """Switch to toggle between Automatic Season Recognition and Manual Season mode."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "auto_season"
+    _attr_device_class = SwitchDeviceClass.SWITCH
+
+    def __init__(
+        self, coordinator: ZehnderDataUpdateCoordinator, entry: ConfigEntry
+    ) -> None:
+        """Initialize the switch."""
+        super().__init__(coordinator)
+        self._clime_uuid = (
+            coordinator.api.clime_uuid or entry.data.get("clime_uuid") or "clime"
+        )
+        self._attr_unique_id = f"{self._clime_uuid}_auto_season"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device information."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._clime_uuid)},
+            name=self.coordinator.api.clime_name,
+            manufacturer="Zehnder",
+            model="ComfoClime 24",
+            sw_version=self.coordinator.api.clime_version,
+            configuration_url=f"http://{self.coordinator.api.host}",
+        )
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if automatic season mode is enabled (season.status == 1)."""
+        tp = self.coordinator.data.get("thermal_profile", {})
+        return tp.get("season", {}).get("status") == 1
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Enable automatic season mode."""
+        await self.coordinator.api.set_auto_season(True)
+        await self.coordinator.async_request_refresh()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Disable automatic season mode (manual season)."""
+        await self.coordinator.api.set_auto_season(False)
         await self.coordinator.async_request_refresh()

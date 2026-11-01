@@ -5,6 +5,8 @@ import logging
 from typing import Any
 
 from homeassistant.components.climate import (
+    ATTR_HVAC_MODE,
+    PRESET_NONE,
     ClimateEntity,
     ClimateEntityFeature,
     HVACAction,
@@ -28,6 +30,7 @@ from .const import (
     SEASON_HEATING,
     SEASON_TRANSITION,
     STATUS_AUTO,
+    STATUS_MANUAL,
 )
 from .coordinator import ZehnderDataUpdateCoordinator
 
@@ -66,6 +69,7 @@ class ZehnderClimate(CoordinatorEntity[ZehnderDataUpdateCoordinator], ClimateEnt
         HVACMode.FAN_ONLY,
     ]
     _attr_preset_modes = [
+        PRESET_NONE,
         PRESET_COMFORT,
         PRESET_POWER,
         PRESET_ECO,
@@ -151,10 +155,13 @@ class ZehnderClimate(CoordinatorEntity[ZehnderDataUpdateCoordinator], ClimateEnt
         if dashboard.get("status") == STATUS_AUTO:
             profile_id = dashboard.get("temperatureProfile", 0)
             return PROFILE_ID_TO_PRESET.get(profile_id, PRESET_COMFORT)
-        return None
+        return PRESET_NONE
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature (sets status: 0 manual mode)."""
+        if hvac_mode := kwargs.get(ATTR_HVAC_MODE):
+            await self.async_set_hvac_mode(hvac_mode)
+
         temp = kwargs.get(ATTR_TEMPERATURE)
         if temp is None:
             return
@@ -178,6 +185,10 @@ class ZehnderClimate(CoordinatorEntity[ZehnderDataUpdateCoordinator], ClimateEnt
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
+        if preset_mode in (PRESET_NONE, "none", "manual"):
+            await self.coordinator.api.set_status(STATUS_MANUAL)
+            await self.coordinator.async_request_refresh()
+            return
         if preset_mode not in PRESET_TO_PROFILE_ID:
             _LOGGER.warning("Unsupported preset mode requested: %s", preset_mode)
             return

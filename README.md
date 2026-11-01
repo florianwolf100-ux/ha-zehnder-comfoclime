@@ -159,6 +159,7 @@ Under **Settings** → **Devices & Services** → **Zehnder ComfoClime** → **C
 | `sensor.supply_coil_temperature` | °C | Evaporator/Condenser supply coil temp |
 | `sensor.exhaust_coil_temperature` | °C | Evaporator/Condenser exhaust coil temp |
 | `sensor.tpma_reference_temperature` | °C | TPMA mixed-air reference temperature |
+| `sensor.comfort_base_temperature` | °C | Base comfort curve temperature |
 | `sensor.setpoint_temperature` | °C | Active target temperature setpoint |
 
 ### Binary Sensors

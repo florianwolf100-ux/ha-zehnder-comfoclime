@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from homeassistant.components.climate import HVACAction, HVACMode
+from homeassistant.components.climate import HVACAction, HVACMode, PRESET_NONE
 from homeassistant.components.fan import FanEntityFeature
 from homeassistant.const import UnitOfTemperature
 
@@ -86,6 +86,7 @@ def mock_coordinator():
             "heatpump_modulation_pct": 60.0,
             "power_watts": 350.0,
             "tpma_temp": 6.5,
+            "comfort_temp": 21.0,
         },
     }
     coord.async_request_refresh = AsyncMock()
@@ -135,9 +136,9 @@ def test_climate_entity(mock_coordinator, mock_entry):
     assert climate.hvac_mode == HVACMode.FAN_ONLY
     assert climate.hvac_action == HVACAction.FAN
 
-    # When in Manual mode (status: 0) -> preset_mode is None
+    # When in Manual mode (status: 0) -> preset_mode is PRESET_NONE
     mock_coordinator.data["dashboard"]["status"] = STATUS_MANUAL
-    assert climate.preset_mode is None
+    assert climate.preset_mode == PRESET_NONE
 
 
 @pytest.mark.asyncio
@@ -148,15 +149,22 @@ async def test_climate_actions(mock_coordinator, mock_entry):
     mock_coordinator.api.set_hvac_mode = AsyncMock()
     mock_coordinator.api.set_preset_profile = AsyncMock()
     mock_coordinator.api.set_hp_standby = AsyncMock()
+    mock_coordinator.api.set_status = AsyncMock()
 
-    await climate.async_set_temperature(temperature=21.0)
+    # Temperature set with hvac_mode simultaneously
+    await climate.async_set_temperature(temperature=21.0, hvac_mode=HVACMode.HEAT)
     mock_coordinator.api.set_target_temperature.assert_called_once_with(21.0)
-
-    await climate.async_set_hvac_mode(HVACMode.HEAT)
     mock_coordinator.api.set_hvac_mode.assert_called_once_with("heat")
+
+    await climate.async_set_hvac_mode(HVACMode.COOL)
+    mock_coordinator.api.set_hvac_mode.assert_called_with("cool")
 
     await climate.async_set_preset_mode("eco")
     mock_coordinator.api.set_preset_profile.assert_called_once_with("eco")
+
+    # Setting preset to PRESET_NONE returns to manual mode
+    await climate.async_set_preset_mode(PRESET_NONE)
+    mock_coordinator.api.set_status.assert_called_once_with(STATUS_MANUAL)
 
     await climate.async_turn_off()
     mock_coordinator.api.set_hp_standby.assert_called_once_with(True)
@@ -335,5 +343,51 @@ async def test_config_flow_cannot_connect(monkeypatch):
     result = await flow.async_step_user({"host": "192.168.178.999"})
     assert result["type"] == "form"
     assert result["errors"] == {"base": "cannot_connect"}
+
+
+@pytest.mark.asyncio
+async def test_setup_without_q350():
+    """Verify that only ComfoClime entities are created when Q350 is absent."""
+    from custom_components.zehnder_comfoclime.sensor import async_setup_entry as sensor_setup
+    from custom_components.zehnder_comfoclime.fan import async_setup_entry as fan_setup
+    from custom_components.zehnder_comfoclime.binary_sensor import async_setup_entry as binary_sensor_setup
+
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "clime_only_entry"
+    entry.data = {"host": "1.2.3.4", "clime_uuid": "MBE_ONLY"}
+
+    coord = MagicMock()
+    coord.api = MagicMock()
+    coord.api.host = "1.2.3.4"
+    coord.api.clime_uuid = "MBE_ONLY"
+    coord.api.q350_uuid = None
+    coord.api.clime_name = "ComfoClime 24"
+    coord.api.q350_name = "ComfoAir Q350"
+    coord.api.clime_version = "R1.5.5"
+    coord.data = {
+        "dashboard": {},
+        "clime": {},
+        "q350": {},
+    }
+
+    hass.data = {DOMAIN: {entry.entry_id: coord}}
+
+    # Fan setup should add 0 entities without Q350
+    fan_entities = []
+    await fan_setup(hass, entry, lambda entities: fan_entities.extend(entities))
+    assert len(fan_entities) == 0
+
+    # Sensor setup should only add Clime sensors (11 sensors)
+    sensor_entities = []
+    await sensor_setup(hass, entry, lambda entities: sensor_entities.extend(entities))
+    assert len(sensor_entities) == 11
+    assert all(s.entity_description.device_target == "clime" for s in sensor_entities)
+
+    # Binary sensor setup should only add Clime binary sensors (3 sensors)
+    binary_entities = []
+    await binary_sensor_setup(hass, entry, lambda entities: binary_entities.extend(entities))
+    assert len(binary_entities) == 3
+    assert all(s.entity_description.device_target == "clime" for s in binary_entities)
 
 

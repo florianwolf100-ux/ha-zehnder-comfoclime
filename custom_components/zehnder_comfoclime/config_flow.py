@@ -36,6 +36,12 @@ class ZehnderConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             host = user_input[CONF_HOST].strip()
+            if host.startswith("http://"):
+                host = host[7:]
+            elif host.startswith("https://"):
+                host = host[8:]
+            host = host.rstrip("/")
+
             session = async_get_clientsession(self.hass)
             api = ZehnderApiClient(host=host, session=session)
 
@@ -47,7 +53,7 @@ class ZehnderConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 else:
                     await api.discover_devices()
                     await self.async_set_unique_id(clime_uuid)
-                    self._abort_if_unique_id_configured()
+                    self._abort_if_unique_id_configured(updates={CONF_HOST: host})
 
                     return self.async_create_entry(
                         title=f"Zehnder ComfoClime ({host})",

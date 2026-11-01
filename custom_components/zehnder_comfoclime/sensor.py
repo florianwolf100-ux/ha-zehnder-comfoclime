@@ -180,6 +180,15 @@ SENSOR_DESCRIPTIONS: tuple[ZehnderSensorEntityDescription, ...] = (
         value_fn=lambda data: data.get("clime", {}).get("tpma_temp"),
     ),
     ZehnderSensorEntityDescription(
+        key="comfort_temp",
+        translation_key="comfort_temp",
+        device_target="clime",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: data.get("clime", {}).get("comfort_temp"),
+    ),
+    ZehnderSensorEntityDescription(
         key="setpoint_temp",
         translation_key="setpoint_temp",
         device_target="clime",
@@ -198,9 +207,11 @@ async def async_setup_entry(
     """Set up Zehnder sensor entities."""
     coordinator: ZehnderDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
+    has_q350 = bool(coordinator.api.q350_uuid or entry.data.get("q350_uuid"))
     entities = [
         ZehnderSensor(coordinator, entry, desc)
         for desc in SENSOR_DESCRIPTIONS
+        if desc.device_target == "clime" or has_q350
     ]
     async_add_entities(entities)
 

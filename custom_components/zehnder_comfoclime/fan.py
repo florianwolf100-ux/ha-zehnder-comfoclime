@@ -15,8 +15,8 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util.percentage import (
-    percentage_to_ranged_value,
-    ranged_value_to_percentage,
+    ordered_list_item_to_percentage,
+    percentage_to_ordered_list_item,
 )
 
 from .const import DOMAIN
@@ -24,7 +24,7 @@ from .coordinator import ZehnderDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-SPEED_RANGE = (1, 3)
+ORDERED_SPEEDS = [1, 2, 3]
 PRESET_MODES = ["1", "2", "3"]
 PRESET_MAP = {
     "1": 1,
@@ -43,7 +43,8 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Zehnder ventilation fan entity."""
     coordinator: ZehnderDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([ZehnderVentilationFan(coordinator, entry)])
+    if coordinator.api.q350_uuid or entry.data.get("q350_uuid"):
+        async_add_entities([ZehnderVentilationFan(coordinator, entry)])
 
 
 class ZehnderVentilationFan(
@@ -52,7 +53,6 @@ class ZehnderVentilationFan(
     """Fan entity representing the Zehnder ComfoAir Q ventilation unit."""
 
     _attr_has_entity_name = True
-    _attr_name = "Ventilation"
     _attr_translation_key = "ventilation"
     _attr_speed_count = 3
     _attr_preset_modes = PRESET_MODES
@@ -99,15 +99,17 @@ class ZehnderVentilationFan(
     def _current_speed(self) -> int:
         """Return current speed number (1, 2, or 3)."""
         dashboard = self.coordinator.data.get("dashboard", {})
-        return int(dashboard.get("fanSpeed", 1))
+        try:
+            speed = int(dashboard.get("fanSpeed", 1))
+            return speed if speed in ORDERED_SPEEDS else 1
+        except (ValueError, TypeError):
+            return 1
 
     @property
     def percentage(self) -> int | None:
         """Return the current speed percentage."""
         speed = self._current_speed
-        if speed is None or speed < 1:
-            return 0
-        return ranged_value_to_percentage(SPEED_RANGE, speed)
+        return ordered_list_item_to_percentage(ORDERED_SPEEDS, speed)
 
     @property
     def preset_mode(self) -> str | None:
@@ -118,13 +120,9 @@ class ZehnderVentilationFan(
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed percentage of the fan."""
         if percentage == 0:
-            # Zehnder ComfoAir Q controlled via ComfoClime minimum running speed is 1
             target_speed = 1
         else:
-            target_speed = math.ceil(
-                percentage_to_ranged_value(SPEED_RANGE, percentage)
-            )
-            target_speed = max(1, min(3, target_speed))
+            target_speed = percentage_to_ordered_list_item(ORDERED_SPEEDS, percentage)
 
         await self.coordinator.api.set_fan_speed(target_speed)
         await self.coordinator.async_request_refresh()

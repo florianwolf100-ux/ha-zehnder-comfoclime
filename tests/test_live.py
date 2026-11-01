@@ -54,6 +54,11 @@ async def test_live_summary_retrieval():
         assert "setPointTemperature" in dash
         assert "season" in dash
         assert "indoorTemperature" in dash
+        assert "temperatureProfile" in dash
+        assert dash["temperatureProfile"] is not None
+
+        assert "thermal_profile" in summary
+        assert "heatingThermalProfileSeasonData" in summary["thermal_profile"]
 
         assert "outdoor_temp" in q350
         assert "supply_temp_wrg" in q350
@@ -64,3 +69,5 @@ async def test_live_summary_retrieval():
         assert "supply_temp_after_hp" in clime
         assert "power_watts" in clime
         assert "heatpump_modulation_pct" in clime
+        assert "comfort_temp" in clime
+        assert clime["comfort_temp"] is not None

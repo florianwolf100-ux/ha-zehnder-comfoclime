@@ -165,3 +165,72 @@ async def test_telemetry_cache_fallback():
     client._request = AsyncMock(side_effect=ZehnderConnectionError("Timeout"))
     fallback_val = await client.read_telemetry("MBE123", 4193, factor=0.1)
     assert fallback_val == 22.3
+
+    # 3. Empty data response also falls back to cached value
+    client._request = AsyncMock(return_value={"data": []})
+    empty_fallback_val = await client.read_telemetry("MBE123", 4193, factor=0.1)
+    assert empty_fallback_val == 22.3
+
+
+def test_host_sanitization():
+    """Test host URL sanitization with various prefixes and slashes."""
+    c1 = ZehnderApiClient(host="192.168.178.106")
+    assert c1.host == "192.168.178.106"
+    assert c1.base_url == "http://192.168.178.106"
+
+    c2 = ZehnderApiClient(host="http://192.168.178.106/")
+    assert c2.host == "192.168.178.106"
+    assert c2.base_url == "http://192.168.178.106"
+
+    c3 = ZehnderApiClient(host="https://mycomfoclime.local/ ")
+    assert c3.host == "mycomfoclime.local"
+    assert c3.base_url == "http://mycomfoclime.local"
+
+
+@pytest.mark.asyncio
+async def test_write_auto_resolves_uuid():
+    """Verify write operation automatically resolves clime UUID if not already set."""
+    client = ZehnderApiClient(host="1.2.3.4")
+    assert client.clime_uuid is None
+
+    client.ping = AsyncMock(return_value={"uuid": "MBE_RESOLVED"})
+    client.clime_uuid = "MBE_RESOLVED"
+    client._request = AsyncMock(return_value={})
+
+    await client.set_fan_speed(2)
+    client._request.assert_called_with(
+        "/system/MBE_RESOLVED/dashboard",
+        method="PUT",
+        data={"fanSpeed": 2, "timestamp": ANY},
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_summary_merges_thermalprofile():
+    """Test that get_summary calls get_thermal_profile and populates temperatureProfile."""
+    client = ZehnderApiClient(host="1.2.3.4")
+    client.clime_uuid = "MBE123"
+    client.q350_uuid = "SIT999"
+
+    mock_dashboard = {
+        "indoorTemperature": 22.5,
+        "setPointTemperature": 22.0,
+        "season": 1,
+        "status": 1,
+        "outdoorTemperature": 5.0,
+        "supplyAirFlow": 150,
+        "exhaustAirFlow": 150,
+    }
+    mock_thermal = {
+        "temperatureProfile": 2,  # eco
+        "heatingThermalProfileSeasonData": {"comfortTemperature": 21.0},
+    }
+
+    client.get_dashboard = AsyncMock(return_value=mock_dashboard)
+    client.get_thermal_profile = AsyncMock(return_value=mock_thermal)
+    client.read_telemetry = AsyncMock(return_value=21.0)
+
+    summary = await client.get_summary()
+    assert summary["dashboard"]["temperatureProfile"] == 2
+    assert summary["thermal_profile"] == mock_thermal
+    assert "comfort_temp" in summary["clime"]

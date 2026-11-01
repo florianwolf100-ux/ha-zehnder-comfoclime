@@ -38,3 +38,5 @@ class ZehnderDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return await self.api.get_summary()
         except ZehnderError as err:
             raise UpdateFailed(f"Error communicating with Zehnder gateway: {err}") from err
+        except Exception as err:
+            raise UpdateFailed(f"Unexpected error communicating with Zehnder gateway: {err}") from err

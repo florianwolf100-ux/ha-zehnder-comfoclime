@@ -15,6 +15,7 @@ from .const import (
     SEASON_COOLING,
     SEASON_HEATING,
     SEASON_TRANSITION,
+    TEL_CLIME_COMFORT_TEMP,
     TEL_CLIME_COMPRESSOR_TEMP,
     TEL_CLIME_EXHAUST_COIL_TEMP,
     TEL_CLIME_EXHAUST_TEMP_HP,
@@ -74,8 +75,15 @@ class ZehnderApiClient:
         timeout: float = 5.0,
     ) -> None:
         """Initialize the client."""
-        self.host = host
-        self.base_url = f"http://{host}"
+        host_clean = host.strip()
+        if host_clean.startswith("http://"):
+            host_clean = host_clean[7:]
+        elif host_clean.startswith("https://"):
+            host_clean = host_clean[8:]
+        host_clean = host_clean.rstrip("/")
+
+        self.host = host_clean
+        self.base_url = f"http://{host_clean}"
         self._session = session
         self._close_session = False
         self._timeout = aiohttp.ClientTimeout(total=timeout)
@@ -212,7 +220,8 @@ class ZehnderApiClient:
                 if device_uuid not in self._telemetry_cache:
                     self._telemetry_cache[device_uuid] = {}
                 self._telemetry_cache[device_uuid][telemetry_id] = val
-            return val
+                return val
+            return self._telemetry_cache.get(device_uuid, {}).get(telemetry_id)
         except Exception as err:
             _LOGGER.debug(
                 "Telemetry %s for device %s failed (%s), using cache if available",
@@ -228,6 +237,15 @@ class ZehnderApiClient:
             await self.discover_devices()
 
         dashboard = await self.get_dashboard()
+
+        # Thermal profile query to accurately populate temperatureProfile
+        thermal_profile: dict[str, Any] = {}
+        try:
+            thermal_profile = await self.get_thermal_profile()
+            if "temperatureProfile" in thermal_profile:
+                dashboard["temperatureProfile"] = thermal_profile["temperatureProfile"]
+        except Exception as err:
+            _LOGGER.debug("Could not fetch thermal profile: %s", err)
 
         # Telemetry queries (executed sequentially via _request lock to avoid ESP socket congestion)
         q350_telemetry: dict[str, Any] = {}
@@ -255,6 +273,9 @@ class ZehnderApiClient:
             clime_telemetry = {
                 "indoor_temp": dashboard.get("indoorTemperature"),
                 "setpoint_temp": dashboard.get("setPointTemperature"),
+                "comfort_temp": await self.read_telemetry(
+                    self.clime_uuid, TEL_CLIME_COMFORT_TEMP, factor=0.1
+                ),
                 "supply_temp_after_hp": await self.read_telemetry(
                     self.clime_uuid, TEL_CLIME_SUPPLY_TEMP_HP, factor=0.1
                 ),
@@ -283,34 +304,45 @@ class ZehnderApiClient:
 
         return {
             "dashboard": dashboard,
+            "thermal_profile": thermal_profile,
             "q350": q350_telemetry,
             "clime": clime_telemetry,
         }
 
     # --- Write operations ---
 
+    async def _ensure_clime_uuid(self) -> str:
+        """Ensure ComfoClime UUID is known before sending system requests."""
+        if not self.clime_uuid:
+            await self.ping()
+        if not self.clime_uuid:
+            raise ZehnderApiError("ComfoClime UUID could not be determined")
+        return self.clime_uuid
+
     async def set_fan_speed(self, speed: int) -> bool:
         """Set fan speed (1, 2, or 3)."""
         if speed not in (1, 2, 3):
             raise ValueError(f"Fan speed must be 1, 2, or 3, got: {speed}")
+        uuid = await self._ensure_clime_uuid()
         payload = {
             "fanSpeed": speed,
             "timestamp": datetime.now().isoformat(),
         }
         await self._request(
-            f"/system/{self.clime_uuid}/dashboard", method="PUT", data=payload
+            f"/system/{uuid}/dashboard", method="PUT", data=payload
         )
         return True
 
     async def set_target_temperature(self, temp: float) -> bool:
         """Set manual target temperature. Must include status: 0 to lock in manual mode."""
+        uuid = await self._ensure_clime_uuid()
         payload = {
             "setPointTemperature": round(temp, 1),
             "status": 0,
             "timestamp": datetime.now().isoformat(),
         }
         await self._request(
-            f"/system/{self.clime_uuid}/dashboard", method="PUT", data=payload
+            f"/system/{uuid}/dashboard", method="PUT", data=payload
         )
         return True
 
@@ -321,13 +353,14 @@ class ZehnderApiClient:
             raise ValueError(
                 f"Unknown preset profile: {profile}. Allowed: {list(PRESET_TO_PROFILE_ID.keys())}"
             )
+        uuid = await self._ensure_clime_uuid()
         payload = {
             "temperatureProfile": PRESET_TO_PROFILE_ID[profile_lower],
             "status": 1,
             "timestamp": datetime.now().isoformat(),
         }
         await self._request(
-            f"/system/{self.clime_uuid}/dashboard", method="PUT", data=payload
+            f"/system/{uuid}/dashboard", method="PUT", data=payload
         )
         return True
 
@@ -347,20 +380,22 @@ class ZehnderApiClient:
                 f"Invalid HVAC mode: {mode}. Allowed: off, heat, cool, fan_only"
             )
 
+        uuid = await self._ensure_clime_uuid()
         payload["timestamp"] = datetime.now().isoformat()
         await self._request(
-            f"/system/{self.clime_uuid}/dashboard", method="PUT", data=payload
+            f"/system/{uuid}/dashboard", method="PUT", data=payload
         )
         return True
 
     async def set_hp_standby(self, standby: bool) -> bool:
         """Set heat pump standby mode."""
+        uuid = await self._ensure_clime_uuid()
         payload = {
             "hpStandby": bool(standby),
             "timestamp": datetime.now().isoformat(),
         }
         await self._request(
-            f"/system/{self.clime_uuid}/dashboard", method="PUT", data=payload
+            f"/system/{uuid}/dashboard", method="PUT", data=payload
         )
         return True
 
@@ -368,12 +403,13 @@ class ZehnderApiClient:
         """Set status: 0 for manual setpoint, 1 for automatic profile."""
         if status not in (0, 1):
             raise ValueError(f"Status must be 0 (manual) or 1 (auto), got {status}")
+        uuid = await self._ensure_clime_uuid()
         payload = {
             "status": status,
             "timestamp": datetime.now().isoformat(),
         }
         await self._request(
-            f"/system/{self.clime_uuid}/dashboard", method="PUT", data=payload
+            f"/system/{uuid}/dashboard", method="PUT", data=payload
         )
         return True
 
@@ -381,12 +417,13 @@ class ZehnderApiClient:
         """Set season: 0 for transition, 1 for heating, 2 for cooling."""
         if season not in (SEASON_TRANSITION, SEASON_HEATING, SEASON_COOLING):
             raise ValueError(f"Season must be 0, 1, or 2, got {season}")
+        uuid = await self._ensure_clime_uuid()
         payload = {
             "season": season,
             "hpStandby": False,
             "timestamp": datetime.now().isoformat(),
         }
         await self._request(
-            f"/system/{self.clime_uuid}/dashboard", method="PUT", data=payload
+            f"/system/{uuid}/dashboard", method="PUT", data=payload
         )
         return True

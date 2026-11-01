@@ -52,6 +52,7 @@
       "power_watts": { "name": "Elektrische Leistung Wärmepumpe" },
       "heatpump_modulation_pct": { "name": "Wärmepumpen-Modulation" },
       "tpma_temp": { "name": "Referenztemperatur Mischluft (TPMA)" },
+      "comfort_temp": { "name": "Komforttemperatur Kurvenbasis" },
       "setpoint_temp": { "name": "Aktuelle Solltemperatur" }
     },
     "binary_sensor": {

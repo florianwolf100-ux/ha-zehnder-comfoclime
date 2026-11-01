@@ -73,9 +73,11 @@ async def async_setup_entry(
     """Set up Zehnder binary sensor entities."""
     coordinator: ZehnderDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
+    has_q350 = bool(coordinator.api.q350_uuid or entry.data.get("q350_uuid"))
     entities = [
         ZehnderBinarySensor(coordinator, entry, desc)
         for desc in BINARY_SENSOR_DESCRIPTIONS
+        if desc.device_target == "clime" or has_q350
     ]
     async_add_entities(entities)
 

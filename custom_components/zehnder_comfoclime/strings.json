@@ -52,6 +52,7 @@
       "power_watts": { "name": "Heat Pump Power" },
       "heatpump_modulation_pct": { "name": "Heat Pump Modulation" },
       "tpma_temp": { "name": "TPMA Reference Temperature" },
+      "comfort_temp": { "name": "Comfort Base Temperature" },
       "setpoint_temp": { "name": "Setpoint Temperature" }
     },
     "binary_sensor": {

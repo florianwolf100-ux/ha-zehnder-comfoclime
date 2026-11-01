@@ -12,6 +12,17 @@ DEFAULT_SCAN_INTERVAL: Final = 30
 MIN_SCAN_INTERVAL: Final = 10
 MAX_SCAN_INTERVAL: Final = 300
 
+# Free@Home SysAP Integration
+CONF_FAH_ENABLED: Final = "fah_enabled"
+CONF_FAH_HOST: Final = "fah_host"
+CONF_FAH_USER: Final = "fah_user"
+CONF_FAH_PASSWORD: Final = "fah_password"
+CONF_FAH_RTC_DEVICE_ID: Final = "fah_rtc_device_id"
+
+DEFAULT_FAH_HOST: Final = "192.168.178.36"
+DEFAULT_FAH_USER: Final = "installer"
+DEFAULT_FAH_RTC_DEVICE_ID: Final = "600005D4E7DC"
+
 # Device Model Type IDs
 MODEL_TYPE_Q350: Final = 1
 MODEL_TYPE_COMFOCLIME: Final = 20

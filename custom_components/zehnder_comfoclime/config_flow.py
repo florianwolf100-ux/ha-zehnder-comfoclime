@@ -18,6 +18,14 @@ from .const import (
     DOMAIN,
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
+    CONF_FAH_ENABLED,
+    CONF_FAH_HOST,
+    CONF_FAH_USER,
+    CONF_FAH_PASSWORD,
+    CONF_FAH_RTC_DEVICE_ID,
+    DEFAULT_FAH_HOST,
+    DEFAULT_FAH_USER,
+    DEFAULT_FAH_RTC_DEVICE_ID,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -113,6 +121,26 @@ class ZehnderOptionsFlowHandler(config_entries.OptionsFlow):
             CONF_SCAN_INTERVAL,
             self._config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
         )
+        fah_enabled = self._config_entry.options.get(
+            CONF_FAH_ENABLED,
+            self._config_entry.data.get(CONF_FAH_ENABLED, False),
+        )
+        fah_host = self._config_entry.options.get(
+            CONF_FAH_HOST,
+            self._config_entry.data.get(CONF_FAH_HOST, DEFAULT_FAH_HOST),
+        )
+        fah_user = self._config_entry.options.get(
+            CONF_FAH_USER,
+            self._config_entry.data.get(CONF_FAH_USER, DEFAULT_FAH_USER),
+        )
+        fah_password = self._config_entry.options.get(
+            CONF_FAH_PASSWORD,
+            self._config_entry.data.get(CONF_FAH_PASSWORD, ""),
+        )
+        fah_rtc_id = self._config_entry.options.get(
+            CONF_FAH_RTC_DEVICE_ID,
+            self._config_entry.data.get(CONF_FAH_RTC_DEVICE_ID, DEFAULT_FAH_RTC_DEVICE_ID),
+        )
 
         return self.async_show_form(
             step_id="init",
@@ -125,6 +153,11 @@ class ZehnderOptionsFlowHandler(config_entries.OptionsFlow):
                         vol.Coerce(int),
                         vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL),
                     ),
+                    vol.Required(CONF_FAH_ENABLED, default=fah_enabled): bool,
+                    vol.Optional(CONF_FAH_HOST, default=fah_host): str,
+                    vol.Optional(CONF_FAH_USER, default=fah_user): str,
+                    vol.Optional(CONF_FAH_PASSWORD, default=fah_password): str,
+                    vol.Optional(CONF_FAH_RTC_DEVICE_ID, default=fah_rtc_id): str,
                 }
             ),
         )

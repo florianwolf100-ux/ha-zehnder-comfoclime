@@ -22,9 +22,14 @@
     "step": {
       "init": {
         "title": "Zehnder ComfoClime Optionen",
-        "description": "Abfrageintervall für Live-Sensordaten anpassen.",
+        "description": "Abfrageintervall und optionale free@home Synchronisation konfigurieren.",
         "data": {
-          "scan_interval": "Aktualisierungsintervall (Sekunden)"
+          "scan_interval": "Aktualisierungsintervall (Sekunden)",
+          "fah_enabled": "free@home RTC Synchronisation aktivieren",
+          "fah_host": "free@home SysAP IP-Adresse",
+          "fah_user": "free@home SysAP Benutzername",
+          "fah_password": "free@home SysAP Passwort",
+          "fah_rtc_device_id": "free@home RTC Geräte-ID"
         }
       }
     }

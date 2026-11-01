@@ -22,9 +22,14 @@
     "step": {
       "init": {
         "title": "Zehnder ComfoClime Options",
-        "description": "Configure polling interval for live sensor readings.",
+        "description": "Configure polling interval and optional free@home integration.",
         "data": {
-          "scan_interval": "Update Interval (seconds)"
+          "scan_interval": "Update Interval (seconds)",
+          "fah_enabled": "Enable free@home RTC Synchronization",
+          "fah_host": "free@home SysAP IP Address",
+          "fah_user": "free@home SysAP Username",
+          "fah_password": "free@home SysAP Password",
+          "fah_rtc_device_id": "free@home RTC Virtual Device ID"
         }
       }
     }

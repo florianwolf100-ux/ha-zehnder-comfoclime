@@ -9,7 +9,20 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import ZehnderApiClient
-from .const import CONF_HOST, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL, DOMAIN
+from .const import (
+    CONF_HOST,
+    CONF_SCAN_INTERVAL,
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
+    CONF_FAH_ENABLED,
+    CONF_FAH_HOST,
+    CONF_FAH_USER,
+    CONF_FAH_PASSWORD,
+    CONF_FAH_RTC_DEVICE_ID,
+    DEFAULT_FAH_HOST,
+    DEFAULT_FAH_USER,
+    DEFAULT_FAH_RTC_DEVICE_ID,
+)
 from .coordinator import ZehnderDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -57,6 +70,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
+    # Set up Free@Home SysAP Virtual RTC Bridge if enabled
+    fah_enabled = entry.options.get(
+        CONF_FAH_ENABLED, entry.data.get(CONF_FAH_ENABLED, False)
+    )
+    if fah_enabled:
+        fah_host = entry.options.get(
+            CONF_FAH_HOST, entry.data.get(CONF_FAH_HOST, DEFAULT_FAH_HOST)
+        )
+        fah_user = entry.options.get(
+            CONF_FAH_USER, entry.data.get(CONF_FAH_USER, DEFAULT_FAH_USER)
+        )
+        fah_password = entry.options.get(
+            CONF_FAH_PASSWORD, entry.data.get(CONF_FAH_PASSWORD, "")
+        )
+        fah_rtc_id = entry.options.get(
+            CONF_FAH_RTC_DEVICE_ID,
+            entry.data.get(CONF_FAH_RTC_DEVICE_ID, DEFAULT_FAH_RTC_DEVICE_ID),
+        )
+
+        if fah_password:
+            from .freeathome import FreeAtHomeBridge
+
+            bridge = FreeAtHomeBridge(
+                hass=hass,
+                coordinator=coordinator,
+                host=fah_host,
+                username=fah_user,
+                password=fah_password,
+                device_id=fah_rtc_id,
+            )
+            await bridge.async_start()
+            hass.data[DOMAIN][f"{entry.entry_id}_fah_bridge"] = bridge
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
@@ -65,6 +111,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a Zehnder ComfoClime config entry."""
+    fah_bridge = hass.data[DOMAIN].pop(f"{entry.entry_id}_fah_bridge", None)
+    if fah_bridge:
+        await fah_bridge.async_stop()
+
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)

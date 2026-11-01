@@ -8,10 +8,13 @@ from custom_components.zehnder_comfoclime.freeathome import (
     FreeAtHomeBridge,
     IDP_FAN_STAGE,
     IDP_SETPOINT_TEMP,
+    IDP_RELATIVE_SETPOINT,
+    IDP_ECO,
     ODP_FAN_LEVEL,
     ODP_FAN_MANUAL,
     ODP_MEASURED_TEMP,
     ODP_SETPOINT_TEMP,
+    ODP_STATE_INDICATION,
 )
 
 
@@ -189,3 +192,73 @@ async def test_bridge_handle_ws_target_temp(mock_hass, mock_coordinator, mock_se
     mock_coordinator.api.set_target_temperature.assert_awaited_once_with(21.5)
     calls = [c.args for c in bridge.set_datapoint.call_args_list]
     assert (ODP_SETPOINT_TEMP, "21.5") in calls
+
+
+@pytest.mark.asyncio
+async def test_bridge_handle_ws_relative_temp_roomtouch(mock_hass, mock_coordinator, mock_session):
+    """Test handling relative setpoint adjustment from RoomTouch panel (+0.5°C)."""
+    bridge = FreeAtHomeBridge(
+        hass=mock_hass,
+        coordinator=mock_coordinator,
+        host="192.168.178.36",
+        username="installer",
+        password="secretpassword",
+        session=mock_session,
+    )
+    bridge._current_setpoint = 22.0
+    bridge.set_datapoint = AsyncMock(return_value=True)
+
+    msg = {
+        "00000000-0000-0000-0000-000000000000": {
+            "datapoints": {
+                f"{bridge.device_id}/ch0000/{IDP_RELATIVE_SETPOINT}": "0.50"
+            }
+        }
+    }
+
+    await bridge._handle_ws_payload(msg)
+
+    # 22.0 + 0.5 = 22.5
+    mock_coordinator.api.set_target_temperature.assert_awaited_once_with(22.5)
+    calls = [c.args for c in bridge.set_datapoint.call_args_list]
+    assert (ODP_SETPOINT_TEMP, "22.5") in calls
+
+
+@pytest.mark.asyncio
+async def test_bridge_handle_ws_eco_toggle(mock_hass, mock_coordinator, mock_session):
+    """Test handling Eco on/off toggle from RoomTouch panel."""
+    bridge = FreeAtHomeBridge(
+        hass=mock_hass,
+        coordinator=mock_coordinator,
+        host="192.168.178.36",
+        username="installer",
+        password="secretpassword",
+        session=mock_session,
+    )
+    bridge.set_datapoint = AsyncMock(return_value=True)
+
+    # Eco ON
+    msg_eco_on = {
+        "00000000-0000-0000-0000-000000000000": {
+            "datapoints": {
+                f"{bridge.device_id}/ch0000/{IDP_ECO}": "1"
+            }
+        }
+    }
+    await bridge._handle_ws_payload(msg_eco_on)
+    calls = [c.args for c in bridge.set_datapoint.call_args_list]
+    assert (ODP_STATE_INDICATION, "4") in calls
+
+    # Eco OFF (Comfort)
+    bridge.set_datapoint.reset_mock()
+    msg_eco_off = {
+        "00000000-0000-0000-0000-000000000000": {
+            "datapoints": {
+                f"{bridge.device_id}/ch0000/{IDP_ECO}": "0"
+            }
+        }
+    }
+    await bridge._handle_ws_payload(msg_eco_off)
+    calls = [c.args for c in bridge.set_datapoint.call_args_list]
+    assert (ODP_STATE_INDICATION, "33") in calls
+

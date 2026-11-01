@@ -17,17 +17,22 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 # Free@Home Datapoints for RTC Master with Fan (FunctionID 0x000A / A):
-IDP_FAN_STAGE = "idp0010"       # pairingID 64: AL_FAN_STAGE_REQUEST ("0"=Auto, "1", "2", "3")
-IDP_CONTROLLER_ON = "idp0012"   # pairingID 66: AL_CONTROLLER_ON_OFF_REQUEST ("1"=On, "0"=Off)
-IDP_SETPOINT_TEMP = "idp0016"   # pairingID 320: AL_INFO_ABSOLUTE_SET_POINT_REQUEST
+# Inputs (written by free@home UI and RoomTouch / SmartTouch panels):
+IDP_RELATIVE_SETPOINT = "idp000f" # pairingID 57: AL_RELATIVE_SET_POINT_REQUEST (RoomTouch +/- clicks)
+IDP_FAN_STAGE = "idp0010"         # pairingID 64: AL_FAN_STAGE_REQUEST ("0"=Auto, "1", "2", "3")
+IDP_ECO = "idp0011"               # pairingID 58: AL_ECO_ON_OFF ("1"=Eco, "0"=Comfort)
+IDP_CONTROLLER_ON = "idp0012"     # pairingID 66: AL_CONTROLLER_ON_OFF_REQUEST ("1"=On, "0"=Off)
+IDP_SETPOINT_TEMP = "idp0016"     # pairingID 320: AL_INFO_ABSOLUTE_SET_POINT_REQUEST (e.g. "22.50")
 
-ODP_FAN_STAGE_HEAT = "odp0004"  # pairingID 310: AL_ACTUATING_FAN_STAGE_HEATING
-ODP_FAN_STAGE_COOL = "odp0005"  # pairingID 327: AL_ACTUATING_FAN_STAGE_COOLING
-ODP_SETPOINT_TEMP = "odp0006"   # pairingID 51: AL_SET_POINT_TEMPERATURE
-ODP_CONTROLLER_ON = "odp0008"   # pairingID 56: AL_CONTROLLER_ON_OFF
-ODP_FAN_LEVEL = "odp000a"       # pairingID 49: AL_FAN_COIL_LEVEL ("0"=Auto/Off, "1", "2", "3")
-ODP_FAN_MANUAL = "odp000b"      # pairingID 55: AL_FAN_MANUAL_ON_OFF ("1"=Manual, "0"=Auto)
-ODP_MEASURED_TEMP = "odp0010"   # pairingID 304: AL_MEASURED_TEMPERATURE
+# Outputs (written by bridge to update free@home UI and RoomTouch panels):
+ODP_FAN_STAGE_HEAT = "odp0004"    # pairingID 310: AL_ACTUATING_FAN_STAGE_HEATING
+ODP_FAN_STAGE_COOL = "odp0005"    # pairingID 327: AL_ACTUATING_FAN_STAGE_COOLING
+ODP_SETPOINT_TEMP = "odp0006"     # pairingID 51: AL_SET_POINT_TEMPERATURE
+ODP_CONTROLLER_ON = "odp0008"     # pairingID 56: AL_CONTROLLER_ON_OFF
+ODP_STATE_INDICATION = "odp0009"  # pairingID 54: AL_STATE_INDICATION (33=Comfort/Heat, 1=Comfort/Cool, 4=Eco)
+ODP_FAN_LEVEL = "odp000a"         # pairingID 49: AL_FAN_COIL_LEVEL ("0"=Auto/Off, "1", "2", "3")
+ODP_FAN_MANUAL = "odp000b"        # pairingID 55: AL_FAN_MANUAL_ON_OFF ("1"=Manual, "0"=Auto)
+ODP_MEASURED_TEMP = "odp0010"     # pairingID 304: AL_MEASURED_TEMPERATURE
 
 SYSAP_UUID = "00000000-0000-0000-0000-000000000000"
 CHANNEL = "ch0000"
@@ -64,6 +69,7 @@ class FreeAtHomeBridge:
 
         self._current_fan_level: int = 1
         self._is_fan_manual: bool = True
+        self._is_eco: bool = False
         self._current_indoor_temp: float = 22.5
         self._current_setpoint: float = 22.5
 
@@ -120,6 +126,8 @@ class FreeAtHomeBridge:
 
         if is_on is not None:
             await self.set_datapoint(ODP_CONTROLLER_ON, "1" if is_on else "0")
+            state_val = "4" if self._is_eco else "33"
+            await self.set_datapoint(ODP_STATE_INDICATION, state_val if is_on else "0")
 
         _LOGGER.debug(
             "Free@Home RTC updated: Ist=%.1f°C, Soll=%.1f°C, Fan=%s (Manual=%s)",
@@ -167,7 +175,7 @@ class FreeAtHomeBridge:
                 if self.device_id in dp_key and CHANNEL in dp_key:
                     _LOGGER.info("Free@Home RTC Event: %s = %s", dp_key, val)
 
-                    # 1. Fan Stage request
+                    # 1. Fan Stage request (from UI and RoomTouch panel)
                     if IDP_FAN_STAGE in dp_key:
                         try:
                             stage = int(val)
@@ -181,6 +189,7 @@ class FreeAtHomeBridge:
                                 await self.set_datapoint(ODP_FAN_MANUAL, "1")
                                 await self.set_datapoint(ODP_FAN_STAGE_HEAT, str(stage))
                                 await self.set_datapoint(ODP_FAN_STAGE_COOL, str(stage))
+                                await self.set_datapoint(ODP_STATE_INDICATION, "33")
                             elif stage == 0:
                                 self._current_fan_level = 0
                                 self._is_fan_manual = False
@@ -194,7 +203,7 @@ class FreeAtHomeBridge:
                         except (ValueError, TypeError):
                             pass
 
-                    # 2. Target Temperature request
+                    # 2. Absolute Target Temperature request (from Web UI / mobile app)
                     elif IDP_SETPOINT_TEMP in dp_key:
                         try:
                             target = float(val)
@@ -206,11 +215,33 @@ class FreeAtHomeBridge:
                         except (ValueError, TypeError):
                             pass
 
-                    # 3. Controller On/Off request
+                    # 3. Relative Target Temperature request (from RoomTouch / SmartTouch panel +/- clicks)
+                    elif IDP_RELATIVE_SETPOINT in dp_key:
+                        try:
+                            delta = float(val)
+                            new_target = round(self._current_setpoint + delta, 1)
+                            _LOGGER.info("RoomTouch requested Relative Temp change %+.1f°C -> %.1f°C", delta, new_target)
+                            self._current_setpoint = new_target
+                            await self.coordinator.api.set_target_temperature(new_target)
+                            await self.set_datapoint(ODP_SETPOINT_TEMP, f"{new_target:.1f}")
+                            await self.coordinator.async_request_refresh()
+                        except (ValueError, TypeError):
+                            pass
+
+                    # 4. Eco on/off toggle (from RoomTouch panel Eco button)
+                    elif IDP_ECO in dp_key:
+                        self._is_eco = (val == "1")
+                        _LOGGER.info("User toggled Eco on free@home panel: %s", self._is_eco)
+                        state_val = "4" if self._is_eco else "33"
+                        await self.set_datapoint(ODP_STATE_INDICATION, state_val)
+
+                    # 5. Controller On/Off request
                     elif IDP_CONTROLLER_ON in dp_key:
                         is_on = val == "1"
                         _LOGGER.info("User toggled RTC On/Off in free@home: %s", is_on)
                         await self.set_datapoint(ODP_CONTROLLER_ON, "1" if is_on else "0")
+                        state_val = "33" if is_on else "0"
+                        await self.set_datapoint(ODP_STATE_INDICATION, state_val)
 
     async def _listen_ws(self) -> None:
         """Maintain WebSocket connection to SysAP."""
@@ -261,6 +292,8 @@ class FreeAtHomeBridge:
                 is_fan_manual=True,
                 is_on=True,
             )
+            # Ensure RoomTouch receives Comfort Mode (33 = Comfort + Heating)
+            await self.set_datapoint(ODP_STATE_INDICATION, "33")
 
         self._unsub_coordinator = self.coordinator.async_add_listener(
             self._on_coordinator_update
